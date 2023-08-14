@@ -34,7 +34,6 @@ class Mapper{
         void conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg);        
         void conesCallbackReal(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg);
         void dataAssEuclid();
-        void visCarState();
         void pubCones();
 
         float euclidThresh;

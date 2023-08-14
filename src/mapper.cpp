@@ -14,7 +14,6 @@ void Mapper::carStateCallbackSim(const fsd_common_msgs::CarState::ConstPtr& msg)
   m_carPose.yaw = msg->car_state.theta;
 
   pubCarPose.publish(m_carPose);
-  visCarState();
 }
 
   void Mapper::carStateCallbackReal(const sgtdv_msgs::CarPose::ConstPtr& msg)
@@ -24,7 +23,6 @@ void Mapper::carStateCallbackSim(const fsd_common_msgs::CarState::ConstPtr& msg)
   m_carPose.yaw = msg->yaw;
 
   pubCarPose.publish(m_carPose);
-  visCarState();
 }
 
 void Mapper::conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg)
@@ -131,88 +129,21 @@ void Mapper::dataAssEuclid(){
   }
 }
 
-void Mapper::visCarState(){
-
-  static visualization_msgs::Marker carPoseMarker;
-  geometry_msgs::Point pointCarPose;
-  static int count = 0;
-  if (!(count++ % 100)) 
-  {
-    carPoseMarker.header.frame_id =  "map";
-    carPoseMarker.header.stamp = ros::Time();
-    carPoseMarker.type = visualization_msgs::Marker::POINTS;
-    carPoseMarker.action = visualization_msgs::Marker::ADD;
-    carPoseMarker.id = 0;
-    carPoseMarker.lifetime = ros::Duration(0);
-    carPoseMarker.scale.x = 0.3;
-    carPoseMarker.scale.y = 0.3;
-    carPoseMarker.color.a = 1;
-    carPoseMarker.color.r = 1;
-
-    pointCarPose.x = m_carPose.position.x;
-    pointCarPose.y = m_carPose.position.y;
-
-    carPoseMarker.points.push_back(pointCarPose);
-    pubCarPoseMarker.publish(carPoseMarker);
-  }
-}
-
 void Mapper::pubCones(){
 
   vector<vector<double>>::iterator iter;
   static sgtdv_msgs::ConeArr coneArr;
   coneArr.cones.clear();
 
-  static visualization_msgs::Marker coneMarker;
-  coneMarker.points.clear();
-  coneMarker.colors.clear();
-  coneMarker.action = visualization_msgs::Marker::DELETEALL;
-
-  coneMarker.header.frame_id = "map";
-  coneMarker.header.stamp = ros::Time();
-  coneMarker.type = visualization_msgs::Marker::POINTS;
-  coneMarker.action = visualization_msgs::Marker::ADD;
-  
   sgtdv_msgs::Cone cone;
-  geometry_msgs::Point pointCone;
-  std_msgs::ColorRGBA coneRGBA;
   for(iter = m_coneMap.begin(); iter < m_coneMap.end(); ++iter)
   {
     cone.coords.x = m_coneMap[iter-m_coneMap.begin()][0];
     cone.coords.y = m_coneMap[iter-m_coneMap.begin()][1];
     cone.color = m_coneMap[iter-m_coneMap.begin()][2];
-    coneArr.cones.push_back(cone);
-    
-    coneMarker.scale.x = 0.2;
-    coneMarker.scale.y = 0.2;
-      
-    pointCone.x = m_coneMap[iter-m_coneMap.begin()][0];
-    pointCone.y = m_coneMap[iter-m_coneMap.begin()][1];
-    
-    if(cone.color == 1){
-      coneRGBA.r = 0;     // blue
-      coneRGBA.g = 0;
-      coneRGBA.b = 1;
-    }
-    else if(cone.color == 2) {
-      coneRGBA.r = 1;     //yellow
-      coneRGBA.g = 1;
-      coneRGBA.b = 0;
-    }
-    else if(cone.color == 3) {
-      coneRGBA.r = 1;     // orange
-      coneRGBA.g = 0.55;
-      coneRGBA.b = 0;   
-    }
-    coneRGBA.a = 1;
-    
-    coneMarker.points.push_back(pointCone);
-    coneMarker.colors.push_back(coneRGBA);
-    }
-    pubMapMarker.publish(coneMarker); 
-
+    coneArr.cones.push_back(cone); 
+  }
   pubMap.publish(coneArr);
-
 }
 
 int main(int argc, char **argv)
@@ -229,9 +160,7 @@ int main(int argc, char **argv)
   ros::Subscriber conesSubReal = nh.subscribe("fusion_cones", 1, &Mapper::conesCallbackReal, &mapper);
   mapper.pubCarPose = nh.advertise<sgtdv_msgs::CarPose>("slam/pose", 1);
   mapper.pubMap = nh.advertise<sgtdv_msgs::ConeArr>("slam/map", 1);
-  mapper.pubCarPoseMarker = nh.advertise<visualization_msgs::Marker>("slam/pose/marker", 1);
-  mapper.pubMapMarker = nh.advertise<visualization_msgs::Marker>("slam/map/marker", 1);
-
+  
   ros::spin();
 
   return 0;
