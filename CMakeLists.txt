@@ -11,7 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   geometry_msgs
-  fsd_common_msgs
   sgtdv_msgs
 )
 
@@ -108,7 +107,6 @@ catkin_package(
     CATKIN_DEPENDS roscpp
     CATKIN_DEPENDS std_msgs   
     CATKIN_DEPENDS geometry_msgs 
-    CATKIN_DEPENDS fsd_common_msgs
     CATKIN_DEPENDS sgtdv_msgs
 )
 ###########

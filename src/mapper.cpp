@@ -7,16 +7,7 @@ Mapper::Mapper()
 {
 }
 
-void Mapper::carStateCallbackSim(const fsd_common_msgs::CarState::ConstPtr& msg)
-{  
-  m_carPose.position.x = msg->car_state.x;
-  m_carPose.position.y = msg->car_state.y;
-  m_carPose.yaw = msg->car_state.theta;
-
-  pubCarPose.publish(m_carPose);
-}
-
-  void Mapper::carStateCallbackReal(const sgtdv_msgs::CarPose::ConstPtr& msg)
+  void Mapper::carPoseCallback(const sgtdv_msgs::CarPose::ConstPtr& msg)
 {  
   m_carPose.position.x = msg->position.x;
   m_carPose.position.y = msg->position.y;
@@ -25,37 +16,7 @@ void Mapper::carStateCallbackSim(const fsd_common_msgs::CarState::ConstPtr& msg)
   pubCarPose.publish(m_carPose);
 }
 
-void Mapper::conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg)
-{
-  m_coneAbsVect.clear();
-  float const *temp;
-
-  for (int i = 0; i < msg->width; i++)
-    {
-
-      temp = reinterpret_cast<const float*>(&msg->data[i*msg->point_step]);
-      geometry_msgs::Point32 point;    
-
-      point.x = *temp;
-      point.y = *(temp + 1);
-
-      if(*(temp + 9) > 0.85){m_coneColor = 1;}   // 1 = blue
-      if(*(temp + 10) > 0.85){m_coneColor = 2;}   // 2 = yellow
-      if(*(temp + 11) > 0.85){m_coneColor = 3;}   // 3 = orange
-
-      m_coneRange = sqrt(pow(point.x,2) + pow(point.y,2));
-      m_coneBearing = atan2(point.y, point.x);
-
-      m_coneAbsX = m_carPose.position.x + m_coneRange * cos(m_coneBearing + m_carPose.yaw);
-      m_coneAbsY = m_carPose.position.y + m_coneRange * sin(m_coneBearing + m_carPose.yaw);
-
-      dataAssEuclid();
-    }
-  
-  pubCones();
-} 
-
-void Mapper::conesCallbackReal(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg)
+void Mapper::conesCallback(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg)
 {
   m_coneAbsVect.clear();
   geometry_msgs::Point32 point;
@@ -154,10 +115,8 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
   
   nh.getParam("euclid_threshold", mapper.euclidThresh);
-  ros::Subscriber carStateSubSim = nh.subscribe("estimation/slam/state", 1, &Mapper::carStateCallbackSim, &mapper);
-  // ros::Subscriber conesSubSim = nh.subscribe("fssim/camera/cones", 1, &Mapper::conesCallbackSim, &mapper);
-  ros::Subscriber carStateSubReal = nh.subscribe("car_state", 1, &Mapper::carStateCallbackReal, &mapper);
-  ros::Subscriber conesSubReal = nh.subscribe("fusion_cones", 1, &Mapper::conesCallbackReal, &mapper);
+  ros::Subscriber carStateSubReal = nh.subscribe("pose_estimate", 1, &Mapper::carPoseCallback, &mapper);
+  ros::Subscriber conesSubReal = nh.subscribe("fusion_cones", 1, &Mapper::conesCallback, &mapper);
   mapper.pubCarPose = nh.advertise<sgtdv_msgs::CarPose>("slam/pose", 1);
   mapper.pubMap = nh.advertise<sgtdv_msgs::ConeArr>("slam/map", 1);
   

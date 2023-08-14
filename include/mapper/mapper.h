@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ros/ros.h>
-#include <fsd_common_msgs/CarState.h>
 #include <sgtdv_msgs/CarPose.h>
 #include <sgtdv_msgs/ConeArr.h>
 #include <sgtdv_msgs/ConeStampedArr.h>
@@ -29,10 +28,8 @@ class Mapper{
         ros::Publisher pubMapMarker;
         ros::Publisher pubCarPoseMarker;
 
-        void carStateCallbackSim(const fsd_common_msgs::CarState::ConstPtr& msg);
-        void carStateCallbackReal(const sgtdv_msgs::CarPose::ConstPtr& msg);
-        void conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg);        
-        void conesCallbackReal(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg);
+        void carPoseCallback(const sgtdv_msgs::CarPose::ConstPtr& msg);
+        void conesCallback(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg);
         void dataAssEuclid();
         void pubCones();
 

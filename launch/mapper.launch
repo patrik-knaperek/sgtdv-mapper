@@ -2,5 +2,5 @@
 
   <rosparam command="load" file="$(find mapper)/config/mapping_conf.yaml"/>
   <node pkg="mapper"   type="mapper"  name="mapper"  output="screen" /> 
-  
+
 </launch>   
