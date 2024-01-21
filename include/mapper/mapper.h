@@ -11,7 +11,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud_conversion.h>
 #include <visualization_msgs/Marker.h>
-#include <sensor_msgs/PointField.h>
+#include <tf/transform_listener.h>
 
 #include <cmath>
 #include <vector>
@@ -30,18 +30,15 @@ class Mapper{
 
         void carPoseCallback(const sgtdv_msgs::CarPose::ConstPtr& msg);
         void conesCallback(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg);
-        void dataAssEuclid();
+        void conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg);
+        void dataAssEuclid(const double newX, const double newY, const double newColor);
         void pubCones();
 
         float euclidThresh;
 
     private:
-
-        double m_coneRange, m_coneBearing, m_coneAbsX, m_coneAbsY, m_euclidDist;
-        double m_coneColor;
-        
-        vector<vector<double> > m_coneAbsVect;
         vector<vector<double> > m_coneMap;
 
         sgtdv_msgs::CarPose m_carPose;
+        tf::TransformListener m_listener;
 };

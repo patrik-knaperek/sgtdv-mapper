@@ -9,64 +9,108 @@ Mapper::Mapper()
 
   void Mapper::carPoseCallback(const sgtdv_msgs::CarPose::ConstPtr& msg)
 {  
-  m_carPose.position.x = msg->position.x;
-  m_carPose.position.y = msg->position.y;
-  m_carPose.yaw = msg->yaw;
+  sgtdv_msgs::CarPose carPose;
+  carPose.position.x = msg->position.x;
+  carPose.position.y = msg->position.y;
+  carPose.yaw = msg->yaw;
 
-  pubCarPose.publish(m_carPose);
+  pubCarPose.publish(carPose);
 }
 
 void Mapper::conesCallback(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg)
 {
-  m_coneAbsVect.clear();
-  geometry_msgs::Point32 point;
+  geometry_msgs::PointStamped coordsBase, coordsMap;
+  double newColor;
 
-  for (int i = 0; i < msg->cones.size(); i++)
+  for (const auto& cone : msg->cones)
     {
-      if(msg->cones[i].color == 'b'){m_coneColor = 1;}   // 'b' = blue
-      if(msg->cones[i].color == 'y'){m_coneColor = 2;}   // 'y' = yellow
-      if(msg->cones[i].color == 's' || msg->cones[i].color == 'g'){m_coneColor = 3;}   // 's' = orange small; 'g' = orange big
+      if(cone.color == 'b'){newColor = 1;}   // 'b' = blue
+      if(cone.color == 'y'){newColor = 2;}   // 'y' = yellow
+      if(cone.color == 's' || cone.color == 'g'){newColor = 3;}   // 's' = orange small; 'g' = orange big
 
-      point.x = msg->cones[i].coords.x;
-      point.y = msg->cones[i].coords.y;
-      m_coneRange = sqrt(pow(point.x,2) + pow(point.y,2));
-      m_coneBearing = atan2(point.y, point.x);
+      coordsBase.header = cone.coords.header;
+      coordsBase.point.x = cone.coords.x;
+      coordsBase.point.y = cone.coords.y;
 
-      m_coneAbsX = m_carPose.position.x + m_coneRange * cos(m_coneBearing + m_carPose.yaw);
-      m_coneAbsY = m_carPose.position.y + m_coneRange * sin(m_coneBearing + m_carPose.yaw);
+      try
+      {
+        m_listener.transformPoint("map", coordsBase, coordsMap);
+      }
+      catch (tf::TransformException &e)
+      {
+        ROS_WARN_STREAM(e.what());
+        continue;
+      }
 
-      dataAssEuclid();
+      dataAssEuclid(coordsMap.point.x, coordsMap.point.y, newColor);
     }
   
   pubCones();
 }
 
-void Mapper::dataAssEuclid(){
+void Mapper::conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg)
+{
+  float const *temp;
+  double newColor;
+
+  for (int i = 0; i < msg->width; i++)
+    {
+
+      temp = reinterpret_cast<const float*>(&msg->data[i*msg->point_step]);
+      geometry_msgs::PointStamped coordsBase, coordsMap;
+
+      coordsBase.header = msg->header;
+      coordsBase.point.x = *temp;
+      coordsBase.point.y = *(temp + 1);
+
+      if(*(temp + 9) > 0.85){newColor = 1;}   // 1 = blue
+      if(*(temp + 10) > 0.85){newColor = 2;}   // 2 = yellow
+      if(*(temp + 11) > 0.85){newColor = 3;}   // 3 = orange
+
+      try
+      {
+        m_listener.transformPoint("map", coordsBase, coordsMap);
+      }
+      catch (tf::TransformException &e)
+      {
+        ROS_WARN_STREAM(e.what());
+        continue;
+      }
+
+      dataAssEuclid(coordsMap.point.x, coordsMap.point.y, newColor);
+    }
+  
+  pubCones();
+} 
+
+
+void Mapper::dataAssEuclid(const double newX, const double newY, const double newColor)
+{
   
   vector<double> newRow;
   vector<double> euclidVect;  
-  euclidVect.clear();
  
   if(m_coneMap.empty() == true){
-    newRow = {m_coneAbsX, m_coneAbsY, m_coneColor, 1};
+    newRow = {newX, newY, newColor, 1};
     m_coneMap.push_back(newRow);
   } 
   else{
    
+    
     for(int i=0; i < m_coneMap.size(); i++)
     {
-      m_euclidDist = sqrt(pow(m_coneAbsX - m_coneMap[i][0], 2) + pow(m_coneAbsY - m_coneMap[i][1], 2));
-      euclidVect.push_back(m_euclidDist);
+      const double euclidDist = sqrt(pow(newX - m_coneMap[i][0], 2) + pow(newY - m_coneMap[i][1], 2));
+      euclidVect.emplace_back(euclidDist);
     }
 
     int minElementIndex = std::min_element(euclidVect.begin(),euclidVect.end()) - euclidVect.begin();
 
     if(euclidVect[minElementIndex] < euclidThresh){
-      m_coneMap[minElementIndex][0] = m_coneAbsX;
-      m_coneMap[minElementIndex][1] = m_coneAbsY;
+      m_coneMap[minElementIndex][0] = newX;
+      m_coneMap[minElementIndex][1] = newY;
       
       /* color decision */
-      if (m_coneMap[minElementIndex][2] == m_coneColor)
+      if (m_coneMap[minElementIndex][2] == newColor)
       {
         m_coneMap[minElementIndex][3]++;
       }
@@ -78,13 +122,13 @@ void Mapper::dataAssEuclid(){
         }
         else
         {
-          m_coneMap[minElementIndex][2] = m_coneColor;
+          m_coneMap[minElementIndex][2] = newColor;
           m_coneMap[minElementIndex][3] = 1;
         }
       }
     }
     else{
-      newRow = {m_coneAbsX, m_coneAbsY, m_coneColor, 1};
+      newRow = {newX, newY, newColor, 1};
       m_coneMap.push_back(newRow); 
     }
   }
@@ -104,19 +148,22 @@ void Mapper::pubCones(){
     cone.color = m_coneMap[iter-m_coneMap.begin()][2];
     coneArr.cones.push_back(cone); 
   }
+
+  // ROS_INFO_STREAM("process cones duration: " << ros::Time::now().toSec() - m_processTimeStart.toSec());
   pubMap.publish(coneArr);
 }
 
 int main(int argc, char **argv)
 {
-  Mapper mapper; 
-
   ros::init(argc, argv, "mapper");
   ros::NodeHandle nh;
+
+  Mapper mapper; 
   
   nh.getParam("euclid_threshold", mapper.euclidThresh);
   ros::Subscriber carStateSubReal = nh.subscribe("pose_estimate", 1, &Mapper::carPoseCallback, &mapper);
   ros::Subscriber conesSubReal = nh.subscribe("fusion_cones", 1, &Mapper::conesCallback, &mapper);
+  // ros::Subscriber conesSubSim = nh.subscribe("fssim/camera/cones", 1, &Mapper::conesCallbackSim, &mapper);
   mapper.pubCarPose = nh.advertise<sgtdv_msgs::CarPose>("slam/pose", 1);
   mapper.pubMap = nh.advertise<sgtdv_msgs::ConeArr>("slam/map", 1);
   
