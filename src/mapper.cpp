@@ -1,20 +1,33 @@
 
-#include "../include/mapper/mapper.h"
+/*****************************************************/
+//Organization: Stuba Green Team
+//Authors: Martin Lučan, Patrik Knaperek, Filip Botka
+/*****************************************************/
 
-using namespace std;
+#include "../include/mapper.h"
 
-Mapper::Mapper()
+Mapper::Mapper(ros::NodeHandle& nh)
 {
+  /* Load parameters */
+  Utils::loadParam(nh, "euclid_threshold", 0.3f, &params_.euclid_th_);
+  
+  /* ROS interface initialization */
+  pub_car_pose_ = nh.advertise<sgtdv_msgs::CarPose>("slam/pose", 1);
+  pub_map_ = nh.advertise<sgtdv_msgs::ConeArr>("slam/map", 1);
+
+  car_pose_sub_ = nh.subscribe("pose_estimate", 1, &Mapper::carPoseCallback, this);
+  cones_sub_ = nh.subscribe("fusion_cones", 1, &Mapper::conesCallback, this);
+  // cones_sub_ = nh.subscribe("fssim/camera/cones", 1, &Mapper::conesCallbackSim, this);
 }
 
-  void Mapper::carPoseCallback(const sgtdv_msgs::CarPose::ConstPtr& msg)
+void Mapper::carPoseCallback(const sgtdv_msgs::CarPose::ConstPtr& msg)
 {  
   sgtdv_msgs::CarPose carPose;
   carPose.position.x = msg->position.x;
   carPose.position.y = msg->position.y;
   carPose.yaw = msg->yaw;
 
-  pubCarPose.publish(carPose);
+  pub_car_pose_.publish(carPose);
 }
 
 void Mapper::conesCallback(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg)
@@ -34,7 +47,7 @@ void Mapper::conesCallback(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg)
 
       try
       {
-        m_listener.transformPoint("map", coordsBase, coordsMap);
+        listener_.transformPoint("map", coordsBase, coordsMap);
       }
       catch (tf::TransformException &e)
       {
@@ -69,7 +82,7 @@ void Mapper::conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg)
 
       try
       {
-        m_listener.transformPoint("map", coordsBase, coordsMap);
+        listener_.transformPoint("map", coordsBase, coordsMap);
       }
       catch (tf::TransformException &e)
       {
@@ -87,87 +100,69 @@ void Mapper::conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg)
 void Mapper::dataAssEuclid(const double newX, const double newY, const double newColor)
 {
   
-  vector<double> newRow;
-  vector<double> euclidVect;  
+  std::vector<double> newRow;
+  std::vector<double> euclidVect;  
  
-  if(m_coneMap.empty() == true){
+  if(cone_map_.empty() == true){
     newRow = {newX, newY, newColor, 1};
-    m_coneMap.push_back(newRow);
+    cone_map_.push_back(newRow);
   } 
   else{
    
     
-    for(int i=0; i < m_coneMap.size(); i++)
+    for (const auto& cone : cone_map_)
     {
-      const double euclidDist = sqrt(pow(newX - m_coneMap[i][0], 2) + pow(newY - m_coneMap[i][1], 2));
+      const double euclidDist = sqrt(pow(newX - cone[0], 2) + pow(newY - cone[1], 2));
       euclidVect.emplace_back(euclidDist);
     }
 
-    int minElementIndex = std::min_element(euclidVect.begin(),euclidVect.end()) - euclidVect.begin();
+    int minElementIndex = std::min_element(euclidVect.begin(), euclidVect.end()) - euclidVect.begin();
 
-    if(euclidVect[minElementIndex] < euclidThresh){
-      m_coneMap[minElementIndex][0] = newX;
-      m_coneMap[minElementIndex][1] = newY;
+    if(euclidVect[minElementIndex] < params_.euclid_th_)
+    {
+      cone_map_[minElementIndex][0] = newX;
+      cone_map_[minElementIndex][1] = newY;
       
       /* color decision */
-      if (m_coneMap[minElementIndex][2] == newColor)
+      if (cone_map_[minElementIndex][2] == newColor)
       {
-        m_coneMap[minElementIndex][3]++;
+        cone_map_[minElementIndex][3]++;
       }
       else
       {
-        if (m_coneMap[minElementIndex][3] > 0)
+        if (cone_map_[minElementIndex][3] > 0)
         {
-          m_coneMap[minElementIndex][3] -= 5;
+          cone_map_[minElementIndex][3] -= 5;
         }
         else
         {
-          m_coneMap[minElementIndex][2] = newColor;
-          m_coneMap[minElementIndex][3] = 1;
+          cone_map_[minElementIndex][2] = newColor;
+          cone_map_[minElementIndex][3] = 1;
         }
       }
     }
-    else{
+    else
+    {
       newRow = {newX, newY, newColor, 1};
-      m_coneMap.push_back(newRow); 
+      cone_map_.push_back(newRow); 
     }
   }
 }
 
-void Mapper::pubCones(){
-
-  vector<vector<double>>::iterator iter;
+void Mapper::pubCones()
+{
+  std::vector<std::vector<double>>::iterator iter;
   static sgtdv_msgs::ConeArr coneArr;
   coneArr.cones.clear();
 
   sgtdv_msgs::Cone cone;
-  for(iter = m_coneMap.begin(); iter < m_coneMap.end(); ++iter)
+  for (iter = cone_map_.begin(); iter < cone_map_.end(); ++iter)
   {
-    cone.coords.x = m_coneMap[iter-m_coneMap.begin()][0];
-    cone.coords.y = m_coneMap[iter-m_coneMap.begin()][1];
-    cone.color = m_coneMap[iter-m_coneMap.begin()][2];
+    cone.coords.x = cone_map_[iter-cone_map_.begin()][0];
+    cone.coords.y = cone_map_[iter-cone_map_.begin()][1];
+    cone.color = cone_map_[iter-cone_map_.begin()][2];
     coneArr.cones.push_back(cone); 
   }
 
-  // ROS_INFO_STREAM("process cones duration: " << ros::Time::now().toSec() - m_processTimeStart.toSec());
-  pubMap.publish(coneArr);
-}
-
-int main(int argc, char **argv)
-{
-  ros::init(argc, argv, "mapper");
-  ros::NodeHandle nh;
-
-  Mapper mapper; 
-  
-  nh.getParam("euclid_threshold", mapper.euclidThresh);
-  ros::Subscriber carStateSubReal = nh.subscribe("pose_estimate", 1, &Mapper::carPoseCallback, &mapper);
-  ros::Subscriber conesSubReal = nh.subscribe("fusion_cones", 1, &Mapper::conesCallback, &mapper);
-  // ros::Subscriber conesSubSim = nh.subscribe("fssim/camera/cones", 1, &Mapper::conesCallbackSim, &mapper);
-  mapper.pubCarPose = nh.advertise<sgtdv_msgs::CarPose>("slam/pose", 1);
-  mapper.pubMap = nh.advertise<sgtdv_msgs::ConeArr>("slam/map", 1);
-  
-  ros::spin();
-
-  return 0;
+  pub_map_.publish(coneArr);
 }

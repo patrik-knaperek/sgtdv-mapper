@@ -1,6 +1,6 @@
 <launch>
 
-  <rosparam command="load" file="$(find mapper)/config/mapping_conf.yaml"/>
+  <rosparam command="load" file="$(find mapper)/config/mapper.yaml"/>
   <node pkg="mapper"   type="mapper"  name="mapper"  output="screen" /> 
 
 </launch>   
