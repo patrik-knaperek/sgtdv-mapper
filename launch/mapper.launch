@@ -3,4 +3,7 @@
   <rosparam command="load" file="$(find mapper)/config/mapper.yaml"/>
   <node pkg="mapper"   type="mapper"  name="mapper"  output="screen" /> 
 
+  <node pkg="tf2_ros" type="static_transform_publisher" name="odom_to_map" 
+    args="0 0 0 0 0 0 map odom" />
+
 </launch>   
