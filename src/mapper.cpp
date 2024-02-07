@@ -18,6 +18,10 @@ Mapper::Mapper(ros::NodeHandle& nh)
   car_pose_sub_ = nh.subscribe("pose_estimate", 1, &Mapper::carPoseCallback, this);
   cones_sub_ = nh.subscribe("fusion_cones", 1, &Mapper::conesCallback, this);
   // cones_sub_ = nh.subscribe("fssim/camera/cones", 1, &Mapper::conesCallbackSim, this);
+
+#ifdef SGT_DEBUG_STATE
+	vis_debug_pub_ = nh.advertise<sgtdv_msgs::DebugState>("slam_debug_state", 10);
+#endif
 }
 
 void Mapper::carPoseCallback(const sgtdv_msgs::CarPose::ConstPtr& msg)
@@ -32,6 +36,13 @@ void Mapper::carPoseCallback(const sgtdv_msgs::CarPose::ConstPtr& msg)
 
 void Mapper::conesCallback(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg)
 {
+#ifdef SGT_DEBUG_STATE
+  sgtdv_msgs::DebugState state;
+  state.stamp = ros::Time::now();
+  state.workingState = 1;
+  vis_debug_pub_.publish(state);
+#endif /* SGT_DEBUG_STATE */
+  
   geometry_msgs::PointStamped coordsBase, coordsMap;
   double newColor;
 
@@ -59,6 +70,13 @@ void Mapper::conesCallback(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg)
     }
   
   pubCones();
+
+#ifdef SGT_DEBUG_STATE
+  state.stamp = ros::Time::now();
+  state.workingState = 0;
+  state.numOfCones = cone_map_.size();
+  vis_debug_pub_.publish(state);
+#endif /* SGT_DEBUG_STATE */
 }
 
 void Mapper::conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg)

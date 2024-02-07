@@ -20,6 +20,8 @@
 #include <sgtdv_msgs/ConeArr.h>
 #include <sgtdv_msgs/ConeStampedArr.h>
 #include <sgtdv_msgs/Point2DStamped.h>
+#include <sgtdv_msgs/DebugState.h>
+#include "../../SGT_Macros.h"
 #include "../../SGT_Utils.h"
 
 class Mapper{
@@ -51,4 +53,8 @@ class Mapper{
 
 		sgtdv_msgs::CarPose m_carPose;
 		tf::TransformListener listener_;
+
+	#ifdef SGT_DEBUG_STATE
+		ros::Publisher vis_debug_pub_;
+	#endif
 };
