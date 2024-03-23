@@ -14,21 +14,18 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 
 catkin_package(
-    CATKIN_DEPENDS roscpp
-    CATKIN_DEPENDS std_msgs   
-    CATKIN_DEPENDS geometry_msgs 
-    CATKIN_DEPENDS sgtdv_msgs
+  CATKIN_DEPENDS roscpp
+  CATKIN_DEPENDS std_msgs   
+  CATKIN_DEPENDS geometry_msgs 
+  CATKIN_DEPENDS sgtdv_msgs
 )
 
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
-)
-
-
-include_directories(
-  ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
+  ${CMAKE_SOURCE_DIR}/../
 )
 
 add_executable(${PROJECT_NAME} src/${PROJECT_NAME}.cpp src/${PROJECT_NAME}_node.cpp )

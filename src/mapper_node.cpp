@@ -1,9 +1,9 @@
 /*****************************************************/
-//Organization: Stuba Green Team
-//Authors: Martin Lučan, Patrik Knaperek, Filip Botka
+/* Organization: Stuba Green Team
+/* Authors: Martin Lučan, Patrik Knaperek, Filip Botka
 /*****************************************************/
 
-#include "../include/mapper.h"
+#include "mapper.h"
 
 int main(int argc, char **argv)
 {
