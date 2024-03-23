@@ -56,9 +56,7 @@ void Mapper::conesCallback(const sgtdv_msgs::ConeWithCovStampedArr::ConstPtr& ms
 
   for(const auto& cone : msg->cones)
   {
-    if(cone.color == 'b'){new_color = 1;}   // 'b' = blue
-    if(cone.color == 'y'){new_color = 2;}   // 'y' = yellow
-    if(cone.color == 's' || cone.color == 'g'){new_color = 3;}   // 's' = orange small; 'g' = orange big
+    new_color = cone.color;
 
     coords_base.header = cone.coords.header;
     coords_base.point.x = cone.coords.x;
@@ -101,10 +99,10 @@ void Mapper::conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg)
     coords_base.header = msg->header;
     coords_base.point.x = *temp;
     coords_base.point.y = *(temp + 1);
-
-    if(*(temp + 9) > 0.85){new_color = 1;}   // 1 = blue
-    if(*(temp + 10) > 0.85){new_color = 2;}   // 2 = yellow
-    if(*(temp + 11) > 0.85){new_color = 3;}   // 3 = orange
+    
+    if(*(temp + 9) > 0.85){new_color = 'b';} // blue
+    if(*(temp + 10) > 0.85){new_color = 'y';} // yellow
+    if(*(temp + 11) > 0.85){new_color = 's';} // orange small
 
     try
     {
