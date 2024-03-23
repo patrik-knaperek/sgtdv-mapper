@@ -42,7 +42,7 @@ void Mapper::carPoseCallback(const sgtdv_msgs::CarPose::ConstPtr& msg) const
   pub_car_pose_.publish(carPose);
 }
 
-void Mapper::conesCallback(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg)
+void Mapper::conesCallback(const sgtdv_msgs::ConeWithCovStampedArr::ConstPtr& msg)
 {
 #ifdef SGT_DEBUG_STATE
   sgtdv_msgs::DebugState state;

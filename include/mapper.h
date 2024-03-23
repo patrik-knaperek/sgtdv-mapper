@@ -12,7 +12,7 @@
 
 /* SGT */
 #include <sgtdv_msgs/CarPose.h>
-#include <sgtdv_msgs/ConeStampedArr.h>
+#include <sgtdv_msgs/ConeWithCovStampedArr.h>
 #include "SGT_Macros.h"
 
 class Mapper
@@ -20,10 +20,10 @@ class Mapper
   public:
     explicit Mapper(ros::NodeHandle& nh);
     ~Mapper() = default;
-
+    
   private:
     void carPoseCallback(const sgtdv_msgs::CarPose::ConstPtr& msg) const;
-    void conesCallback(const sgtdv_msgs::ConeStampedArr::ConstPtr& msg);
+    void conesCallback(const sgtdv_msgs::ConeWithCovStampedArr::ConstPtr& msg);
     void conesCallbackSim(const sensor_msgs::PointCloud2::ConstPtr& msg);
     void dataAssEuclid(const double new_x, const double new_y, const double new_color);
     void pubCones() const;
