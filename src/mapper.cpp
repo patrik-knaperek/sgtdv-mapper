@@ -21,11 +21,11 @@ Mapper::Mapper(ros::NodeHandle& nh) :
   pub_car_pose_(nh.advertise<sgtdv_msgs::CarPose>("slam/pose", 1)),
   pub_map_(nh.advertise<sgtdv_msgs::ConeArr>("slam/map", 1)),
 
-  car_pose_sub_(nh.subscribe("pose_estimate", 1, &Mapper::carPoseCallback, this)),
-  cones_sub_(nh.subscribe("fusion_cones", 1, &Mapper::conesCallback, this))
+  car_pose_sub_(nh.subscribe("odometry/pose", 1, &Mapper::carPoseCallback, this)),
+  cones_sub_(nh.subscribe("fusion/cones", 1, &Mapper::conesCallback, this))
   //, cones_sub_(nh.subscribe("fssim/camera/cones", 1, &Mapper::conesCallbackSim, this)
 #ifdef SGT_DEBUG_STATE
-  , vis_debug_pub_(nh.advertise<sgtdv_msgs::DebugState>("slam_debug_state", 2))
+  , vis_debug_pub_(nh.advertise<sgtdv_msgs::DebugState>("slam/debug_state", 2))
 #endif
 {
   /* Load parameters */
